@@ -3,6 +3,7 @@
   "version": "2.2.3",
   "description": "Popcorn Time API is developed to make it easier for anyone to create their own version of Popcorn Time.",
   "dependencies": {
+    "URIjs": "^1.16.1",
     "async-q": "^0.3.1",
     "babel-runtime": "^6.18.0",
     "body-parser": "^1.15.2",
@@ -58,23 +59,23 @@
     "test": "./node_modules/.bin/istanbul cover node_modules/mocha/bin/_mocha -- --compilers js:babel-core/register --colors -R spec test/**/*.js",
     "coverage": "cat ./coverage/lcov.info | ./node_modules/.bin/coveralls",
     "prepublish": "./node_modules/.bin/gulp build",
-    "start": "node ./build/popcorn-api.js --run",
-    "start-dev": "./node_modules/.bin/babel-node ./src/popcorn-api.js --run",
-    "server": "node ./build/popcorn-api.js --server",
-    "server-dev": "./node_modules/.bin/babel-node ./src/popcorn-api.js --server",
-    "forever": "./node_modules/.bin/forever start ./build/popcorn-api.js --run",
+    "start": "node ./build/popcorn-api-official.js --run",
+    "start-dev": "./node_modules/.bin/babel-node ./src/popcorn-api-official.js --run",
+    "server": "node ./build/popcorn-api-official.js --server",
+    "server-dev": "./node_modules/.bin/babel-node ./src/popcorn-api-official.js --server",
+    "forever": "./node_modules/.bin/forever start ./build/popcorn-api-official.js --run",
     "docs": "./node_modules/.bin/esdoc -c .esdoc.json",
     "lint": "./node_modules/.bin/eslint src/**/*.js"
   },
   "bin": {
-    "popcorn-api": "./build/popcorn-api.js"
+    "popcorn-api-official": "./build/popcorn-api-official.js"
   },
   "engines": {
     "node": ">=6.3.0"
   },
-  "main": "./build/popcorn-api.js",
+  "main": "./build/popcorn-api-official.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/popcorn-official/popcorn-api.git"
+    "url": "https://github.com/ziro-official/popcorn-api.git"
   }
 }

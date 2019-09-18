@@ -385,8 +385,12 @@ export default class CLI {
     } else if (program.import) {
       this._importPrompt();
     } else {
-      console.error("\n  \x1b[31mError:\x1b[36m No valid command given. Please check below:\x1b[0m");
-      program.help();
+      new Index({
+        start: true,
+        pretty: true,
+        verbose: false,
+        debug: false
+      });
     }
   }
 

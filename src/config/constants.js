@@ -349,7 +349,9 @@ export const nyaaAnimeProviders = [
  * @type {OMDB}
  * @see https://github.com/ChrisAlderson/omdb-api-pt
  */
-export const omdb = new OMDB();
+export const omdb = new OMDB({
+  apiKey: "91c7f37"
+});
 
 /**
  * Check if this instance of the API is the master. Default is `true`.
@@ -379,7 +381,7 @@ export const pageSize = 50;
  * The port on which the API will run on. Default is `5000`.
  * @type {Integer}
  */
-export const port = 5000;
+export const port = 80;
 
 /**
  * The promise object to override the mongoose promise object. Default is `global.Promise`.
