@@ -43,6 +43,8 @@ export default class YTS {
      * @type {Util}
      */
     this._util = new Util();
+
+    this.last_page = 0;
   }
 
   /**
@@ -57,8 +59,10 @@ export default class YTS {
         if (err && retry) {
           return resolve(this._getTotalPages(false));
         } else if (err) {
+          logger.warn(`YTS: ${err} with link: 'list_movies.json'`);
           return reject(`YTS: ${err} with link: 'list_movies.json'`);
         } else if (!body || res.statusCode >= 400) {
+          logger.warn(`YTS: Could not find data on '${url}', status code: ${res.statusCode}.`);
           return reject(`YTS: Could not find data on '${url}'.`);
         } else {
           body = JSON.parse(body);
@@ -101,24 +105,46 @@ export default class YTS {
   }
 
   /**
+   * Delay the cb.
+   * @param {Integer} page - The page to get the data from.
+   * @param {Boolean} [retry=true] - Retry the function.
+   * @returns {Promise} - Formatted data from one page.
+   */
+  _delay (resolve, data) {
+    setTimeout(() => {
+      return resolve(data)
+    }, 500);
+  }
+  /**
    * Get formatted data from one page.
    * @param {Integer} page - The page to get the data from.
    * @param {Boolean} [retry=true] - Retry the function.
    * @returns {Promise} - Formatted data from one page.
    */
   _getOnePage(page, retry = true) {
-    const url = `?limit=50&page=${page + 1}`;
+    const url = `?limit=50&page=${page + 1}&sort_by=date_added&order_by=asc`;
     return new Promise((resolve, reject) => {
       this._request(url, (err, res, body) => {
         if (err && retry) {
           return resolve(this._getOnePage(page, false));
         } else if (err) {
-          return reject(`YTS: ${err} with link: '?limit=50&page=${page + 1}'`);
+          logger.error(`YTS: ${err} with link: '?limit=50&page=${page + 1}'`);
+          return _delay(resolve, []);
         } else if (!body || res.statusCode >= 400) {
-          return reject(`YTS: Could not find data on '${url}'.`);
+          logger.error(`YTS: Could not find data on '${url}'.`);
+          return _delay(resolve, []);
         } else {
-          body = JSON.parse(body);
-          return resolve(this._formatPage(body.data.movies));
+          try {
+            body = JSON.parse(body);
+            if (body.data.movies) {
+              return _delay(resolve, this._formatPage(body.data.movies));
+            } else {
+              return _delay(resolve, []);
+            }
+          } catch (e) {
+            logger.warn(`Parse json from yts failed: ${e.message} - ${body}`)
+            return _delay(resolve, []);
+          }
         }
       });
     });
@@ -129,22 +155,31 @@ export default class YTS {
    * @returns {Array} - A list of all the found movies.
    */
   async _getMovies() {
+    let movies = [];
     try {
       const totalPages = await this._getTotalPages(); // Change to 'const' for production.
-      if (!totalPages) return this._util.onError(`${this.name}: totalPages returned; '${totalPages}'`);
+      if (!totalPages) {
+        logger.warn(`${this.name}: totalPages returned; '${totalPages}'`);
+        return movies;
+      }
+
       // totalPages = 3; // For testing purposes only.
-      let movies = [];
       return await asyncq.timesSeries(totalPages, async page => {
-        try {
-          logger.info(`${this.name}: Starting searching YTS on page ${page + 1} out of ${totalPages}`);
-          const onePage = await this._getOnePage(page);
-          movies = movies.concat(onePage);
-        } catch (err) {
-          return this._util.onError(err);
+        if (page + 1 > this.last_page) {
+          try {
+            logger.info(`${this.name}: Starting searching YTS on page ${page + 1} out of total ${totalPages} pages`);
+            const onePage = await this._getOnePage(page);
+            movies = movies.concat(onePage);
+            logger.info(`${this.name}: Got ${onePage.length} YTS movies on page ${page + 1} out of ${totalPages}`);
+            this.last_page = page + 1;
+          } catch (err) {
+            logger.warn(`Get yts movies page failed: ${err.message}`);
+          }
         }
       }).then(() => movies);
     } catch (err) {
-      return this._util.onError(err);
+      logger.warn(`Get yts movies page has failed: ${err.message}`);
+      return movies;
     }
   }
 
