@@ -1,0 +1,18 @@
+{
+  "windows": {},
+  "linux": {
+    "x64": {
+      "version": "0.3.10",
+      "updateUrl": "magnet:?xt=urn:btih:a42eb357680b0550c66ee579849363b5ab5f660d&dn=Popcorn-Time-0.3.10_linux64.zip&tr=udp%3A%2F%2Fexplodie.org%3A6969&tr=udp%3A%2F%2Ftracker.coppersurfer.tk%3A6969&tr=udp%3A%2F%2Ftracker.empire-js.us%3A1337&tr=udp%3A%2F%2Ftracker.leechers-paradise.org%3A6969&tr=udp%3A%2F%2Ftracker.opentrackr.org%3A1337&tr=wss%3A%2F%2Ftracker.btorrent.xyz&tr=wss%3A%2F%2Ftracker.fastcast.nz&tr=wss%3A%2F%2Ftracker.openwebtorrent.com",
+      "sourceUrl": "https://storage.googleapis.com/ziro-project.appspot.com/Popcorn-Time-0.3.10_linux64.zip",
+      "checksum": "2cb660d369213e63dae08a9f1345a4ccb3381e4c",
+      "signature": "AFRgzKClZ4eam2GoDQJE/5QtEuE+IexltP8grPYCl6a8DZ6VJ0CTGKw+SOEDIYkhnUmYLwW0joVZbUOeXlonGRiIEr7+YKX9aRsZZCV9Doe3mvdd5qTSBA3C1WZyu0niQgoSTf7ogMooduGKYRO4yiMkqPDk6jXRjEu/TfOF31Z5BVN19T8WphmBi/B9D2FWsqTL0fux9tZF4A6ZnC7ZPchipBOTv4+vw3bL9mTaOq51y1eUQfvSnoqzD0V5C/3XaDWfDEaKm7awt18J1S3gJR5tuszwQMvkDW3H3af0S+5vPCcL9yg53oPosJItpnwmSnWAgV+D0N++zEc3q7NexQ==",
+      "title": "Popcorn-Time v0.3.10",
+      "description": "Please Download the last version from https://popcorn-api.io",
+      "changeLog": [],
+      "gitTag": "0.3.10",
+      "gitCommit": ""
+    }
+  }
+}
+

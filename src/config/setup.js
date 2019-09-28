@@ -29,6 +29,9 @@ export default class Setup {
     // Enable parsing JSON bodies.
     app.use(bodyParser.json());
 
+    // Public folder
+    app.use(express.static('public'));
+
     // Enables compression of response bodies.
     app.use(compress({
       threshold: 1400,

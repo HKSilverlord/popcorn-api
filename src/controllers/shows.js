@@ -34,11 +34,7 @@ export default class Shows {
    * @returns {String[]} - A list of pages which are available.
    */
   getShows(req, res, next) {
-    return Show.count({
-      num_seasons: {
-        $gt: 0
-      }
-    }).exec().then(count => {
+    return Show.count({}).exec().then(count => {
       const pages = Math.round(count / pageSize);
       const docs = [];
 
@@ -61,11 +57,7 @@ export default class Shows {
 
     if (req.params.page.match(/all/i)) {
       return Show.aggregate([{
-          $match: {
-            num_seasons: {
-              $gt: 0
-            }
-          }
+          $match: {}
         }, {
           $project: Shows._projections
         }, {
@@ -76,11 +68,7 @@ export default class Shows {
         .then(docs => res.json(docs))
         .catch(err => next(err));
     } else {
-      const query = {
-        num_seasons: {
-          $gt: 0
-        }
-      };
+      const query = {};
       const data = req.query;
 
       if (!data.order) data.order = -1;
