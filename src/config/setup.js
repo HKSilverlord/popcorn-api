@@ -1,6 +1,7 @@
 // Import the neccesary modules.
 import bodyParser from "body-parser";
 import compress from "compression";
+import express from "express";
 import mongoose from "mongoose";
 import responseTime from "response-time";
 
