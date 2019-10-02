@@ -113,7 +113,7 @@ export default class YTS {
   _delay (resolve, data) {
     setTimeout(() => {
       return resolve(data)
-    }, 500);
+    }, 1500);
   }
   /**
    * Get formatted data from one page.
@@ -129,21 +129,21 @@ export default class YTS {
           return resolve(this._getOnePage(page, false));
         } else if (err) {
           logger.error(`YTS: ${err} with link: '?limit=50&page=${page + 1}'`);
-          return _delay(resolve, []);
+          return this._delay(resolve, []);
         } else if (!body || res.statusCode >= 400) {
           logger.error(`YTS: Could not find data on '${url}'.`);
-          return _delay(resolve, []);
+          return this._delay(resolve, []);
         } else {
           try {
             body = JSON.parse(body);
             if (body.data.movies) {
-              return _delay(resolve, this._formatPage(body.data.movies));
+              return this._delay(resolve, this._formatPage(body.data.movies));
             } else {
-              return _delay(resolve, []);
+              return this._delay(resolve, []);
             }
           } catch (e) {
             logger.warn(`Parse json from yts failed: ${e.message} - ${body}`)
-            return _delay(resolve, []);
+            return this._delay(resolve, []);
           }
         }
       });
