@@ -121,11 +121,18 @@ export default class Helper {
 
     try {
       const tmdbData = await tmdb.call(`/movie/${tmdb_id}/images`, {});
+      if (!tmdbData.posters || tmdbData.posters.length <= 0) {
+        throw new Error(`Invalid tmdb posters for /movie/${tmdb_id}`);;
+      }
 
-      let tmdbPoster = tmdbData['posters'].filter(poster => poster.iso_639_1 === "en" || poster.iso_639_1 === null)[0]
+      if (!tmdbData.backdrops || tmdbData.backdrops.length <= 0) {
+        tmdbData.backdrops = tmdbData.posters;
+      }
+
+      let tmdbPoster = tmdbData['posters'][0];
       tmdbPoster = tmdb.getImageUrl(tmdbPoster.file_path, 'w500');
 
-      let tmdbBackdrop = tmdbData['backdrops'].filter(backdrop => backdrop.iso_639_1 === "en" || backdrop.iso_639_1 === null)[0];
+      let tmdbBackdrop = tmdbData['backdrops'][0];
       tmdbBackdrop = tmdb.getImageUrl(tmdbBackdrop.file_path, 'w500');
 
       images.banner = tmdbPoster ? tmdbPoster : holder;
@@ -147,7 +154,18 @@ export default class Helper {
           images.fanart = fanartImages.moviebackground ? fanartImages.moviebackground[0].url : fanartImages.hdmovieclearart ? fanartImages.hdmovieclearart[0].url : holder;
           images.poster = fanartImages.movieposter ? fanartImages.movieposter[0].url : holder;
         } catch (err) {
-          return this._util.onError(`Images: Could not find images on: ${err.path || err} with id: '${tmdb_id || imdb_id}'`);
+          try {
+            let images = await mdata.images.movie({imdb: imdb_id, tmdb: tmdb_id})
+            if (!images.poster && !images.fanart) {
+              throw new Error(`Invalid tmdb posters for /tv/${tmdb_id}`);
+            }
+
+            images.banner = images.fanart || images.poster;
+            images.fanart = images.fanart || images.poster;
+            images.poster = images.poster || images.fanart;
+          } catch (e) {
+            throw new Error(`Images: Could not find images on: ${e.path || e} with id: '${tmdb_id | tvdb_id}'`);
+          }
         }
       }
     }

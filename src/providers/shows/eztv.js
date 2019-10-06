@@ -2,6 +2,7 @@
 import asyncq from "async-q";
 import EztvAPI from "eztv-api-pt";
 
+import Show from "../../models/Show";
 import Extractor from "../extractors/showextractor";
 import Util from "../../util";
 import { maxWebRequest } from "../../config/constants";
@@ -50,11 +51,21 @@ export default class EZTV {
       logger.info(`${this.name}: Starting scraping...`);
       const shows = await this._eztv.getAllShows();
       logger.info(`${this.name}: Found ${shows.length} shows.`);
-
-      return await asyncq.mapLimit(shows, maxWebRequest, async show => {
+      return await asyncq.mapLimit(shows, 1, async show => {
         try {
-          show = await this._eztv.getShowData(show);
-          return await this._extractor.getShow(show);
+          const found = await Show.findOne({ slug: show.slug }).exec();
+          logger.info(`Processing show: slug - ${show.slug} - ${show.show} - ${show.id}`);
+          if (!found || found.status != 'ended') {
+            show = await this._eztv.getShowData(show);
+            if (show.episodes && Object.keys(show.episodes).length >= 0) {
+              logger.info(`Found eztv show imdb ${show.imdb}, ${Object.keys(show.episodes).length} seasons for ${show.slug}`);
+              return await this._extractor.getShow(show);
+            }
+
+            return logger.warn(`Show ${show.slug} have no episodes`);
+          }
+
+          return logger.info(`Show ${show.slug} already finished`);
         } catch (err) {
           return this._util.onError(err);
         }

@@ -12,6 +12,7 @@ const ShowSchema = new mongoose.Schema({
   },
   imdb_id: String,
   tvdb_id: String,
+  tmdb_id: String,
   title: String,
   year: String,
   slug: String,
@@ -30,6 +31,7 @@ const ShowSchema = new mongoose.Schema({
   air_time: String,
   status: String,
   num_seasons: Number,
+  aired_episodes: Number,
   last_updated: Number,
   latest_episode: {
     type: Number,
@@ -41,8 +43,9 @@ const ShowSchema = new mongoose.Schema({
     poster: String
   },
   genres: [],
+  language: String,
   episodes: []
-});
+}, { minimize: false });
 
 // Create the show model.
 const Show = mongoose.model("Show", ShowSchema);

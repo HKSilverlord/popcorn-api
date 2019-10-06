@@ -5,6 +5,7 @@ import path from "path";
 import TMDB from 'themoviedbclient';
 import Trakt from "trakt.tv";
 import TVDB from "node-tvdb";
+import MData from 'mdata';
 
 /**
  * Map object for correcting anime slugs.
@@ -497,6 +498,18 @@ export const tmdb = new TMDB("2592f66235042e3e31705e3d56da0a69");
 export const trakt = new Trakt({
   client_id: "70c43f8f4c0de74a33ac1e66b6067f11d14ad13e33cd4ebd08860ba8be014907"
 });
+
+/**
+ * A configured API to get images.
+ * @type {Trakt}
+ * @see https://github.com/vankasteelj/mdata
+ */
+export const mdata = new MData({
+    fanart: "bd2753f04538b01479e39e695308b921",
+    tmdb: "2592f66235042e3e31705e3d56da0a69",
+    tvdb: "B17D23818D6E884D",
+    omdb: "fa1eab42"
+})
 
 /**
  * A configured TVDB API.

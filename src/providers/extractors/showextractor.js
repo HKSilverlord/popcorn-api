@@ -38,10 +38,11 @@ export default class Extractor extends BaseExtractor {
    */
   async getShow(show) {
     try {
-      const newShow = await this._helper.getTraktInfo(show.slug);
+      const newShow = await this._helper.getTraktInfo(show.imdb);
+      newShow.dateBased = show.datebased || false;
+      logger.info(`Found Trakt.tv show tvdb ${newShow.tvdb_id} for ${show.imdb}`)
       if (newShow && newShow._id) {
-        delete show.episodes[0];
-        return await this._helper.addEpisodes(newShow, show.episodes, show.slug);
+        return await this._helper.addEpisodes(newShow, show.episodes || [], show.imdb);
       }
     } catch (err) {
       return this._util.onError(err);

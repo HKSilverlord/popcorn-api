@@ -51,7 +51,7 @@ export default class Util {
     const jsonFile = path.join(tempDir, `${collection}s.json`);
     logger.info(`Exporting collection: '${collection}s', to: '${jsonFile}'`);
 
-    return this.executeCommand(`mongoexport --db ${dbName} --collection ${collection}s --out "${jsonFile}"`);
+    return this.executeCommand(`mongoexport --forceTableScan --db ${dbName} --collection ${collection}s --out "${jsonFile}"`);
   }
 
   /**

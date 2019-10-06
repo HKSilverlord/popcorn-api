@@ -157,7 +157,7 @@ export default class YTS {
   async _getMovies() {
     let movies = [];
     try {
-      const totalPages = await this._getTotalPages(); // Change to 'const' for production.
+      let totalPages = await this._getTotalPages(); // Change to 'const' for production.
       if (!totalPages) {
         logger.warn(`${this.name}: totalPages returned; '${totalPages}'`);
         return movies;

@@ -11,6 +11,7 @@ import katMovie from "./providers/movies/kat";
 import katShow from "./providers/shows/kat";
 import Nyaa from "./providers/anime/nyaa";
 import YTS from "./providers/movies/yts";
+import Trakt from "./providers/trakt.tv";
 import Util from "./util";
 import {
   collections,
@@ -42,6 +43,22 @@ export default class Scraper {
      * @type {Boolean}
      */
     Scraper._debug = debug;
+  }
+
+  /**
+   * Start show scraping from ExtraTorrent.
+   * @returns {Show[]} A list of all the scraped shows.
+   */
+  async _scrapeTrakt() {
+    try {
+      const trakt = new Trakt("Trakt");
+      Scraper._util.setStatus(`Scraping ${trakt.name}`);
+      const traktData = await trakt.search();
+      logger.info(`${trakt.name}: Done.`);
+      return traktData;
+    } catch (err) {
+      return Scraper._util.onError(err);
+    }
   }
 
   /**
@@ -223,18 +240,19 @@ export default class Scraper {
     Scraper._util.setLastUpdated();
 
     asyncq.eachSeries([
-      this._scrapeEZTVShows,
-      this._scrapeExtraTorrentShows,
+      this._scrapeTrakt,
+      // this._scrapeEZTVShows,
+      // this._scrapeExtraTorrentShows,
       // this._scrapeKATShows,
-
-      this._scrapeExtraTorrentMovies,
+      //
+      // this._scrapeExtraTorrentMovies,
       // this._scrapeKATMovies,
-      this._scrapeYTSMovies,
+      // this._scrapeYTSMovies,
 
-      this._scrapeExtraTorrentAnime,
-      this._scrapeHorribleSubsAnime,
+      // this._scrapeExtraTorrentAnime,
+      // this._scrapeHorribleSubsAnime,
       // this._scrapeKATAnime,
-      this._scrapeNyaaAnime
+      // this._scrapeNyaaAnime
     ], scraper => scraper())
       .then(() => Scraper._util.setStatus())
       .then(() => asyncq.eachSeries(collections, collection => Scraper._util.exportCollection(collection)))

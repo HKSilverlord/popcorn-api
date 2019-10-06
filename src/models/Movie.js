@@ -11,6 +11,7 @@ const MovieSchema = new mongoose.Schema({
     }
   },
   imdb_id: String,
+  tmdb_id: String,
   title: String,
   year: String,
   slug: String,
@@ -37,8 +38,9 @@ const MovieSchema = new mongoose.Schema({
     default: null
   },
   certification: String,
+  language: String,
   torrents: {}
-});
+}, { minimize: false });
 
 // Create the movie model.
 const Movie = mongoose.model("Movie", MovieSchema);

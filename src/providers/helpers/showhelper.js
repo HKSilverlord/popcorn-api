@@ -3,7 +3,7 @@ import asyncq from "async-q";
 
 import Show from "../../models/Show";
 import Util from "../../util";
-import { fanart, trakt, tmdb, tvdb } from "../../config/constants";
+import { fanart, trakt, tmdb, tvdb, mdata } from "../../config/constants";
 
 /** Class for saving shows. */
 export default class Helper {
@@ -32,23 +32,15 @@ export default class Helper {
    * @returns {Show} - A newly updated show.
    */
   async _updateNumSeasons(show) {
-    const saved = await Show.findOneAndUpdate({
-      _id: show._id
-    }, show, {
-      new: true,
-      upsert: true
-    }).exec();
-
     const distinct = await Show.distinct("episodes.season", {
-      _id: saved._id
+      _id: show._id
     }).exec();
-    saved.num_seasons = distinct.length;
 
     return await Show.findOneAndUpdate({
-      _id: saved._id
-    }, saved, {
+      _id: show._id
+    }, { num_seasons: distinct.length }, {
       new: true,
-      upsert: true
+      upsert: false
     }).exec();
   }
 
@@ -133,11 +125,11 @@ export default class Helper {
    * @param {Integer} seasonNumber - The season number.
    * @param {String} slug - The slug of the show.
    */
-  async _addSeasonalSeason(show, episodes, seasonNumber, slug) {
+  async _addSeasonalSeason(show, episodes, seasonNumber, imdb) {
     try {
       seasonNumber = parseInt(seasonNumber);
       const season = await trakt.seasons.season({
-        id: slug,
+        id: imdb,
         season: seasonNumber,
         extended: "full"
       });
@@ -167,7 +159,7 @@ export default class Helper {
         }
       }
     } catch (err) {
-      return this._util.onError(`Trakt: Could not find any data on: ${err.path || err} with slug: '${slug}'`);
+      return this._util.onError(`Trakt: Could not find any data on: ${err.path || err} with slug: '${imdb}'`);
     }
   }
 
@@ -178,7 +170,7 @@ export default class Helper {
    * @param {Integer} seasonNumber - The season number.
    * @param {String} slug - The slug of the show.
    */
-  async _addDateBasedSeason(show, episodes, seasonNumber, slug) {
+  async _addDateBasedSeason(show, episodes, seasonNumber, imdb) {
     try {
       if (show.tvdb_id) {
         const tvdbShow = await tvdb.getSeriesAllById(show.tvdb_id);
@@ -213,6 +205,8 @@ export default class Helper {
             });
           }
         }
+      } else {
+        logger.info(`No tvdb_id for ${imdb}`);
       }
     } catch (err) {
       return this._util.onError(`TVDB: Could not find any data on: ${err.path || err} with tvdb_id: '${show.tvdb_id}'`);
@@ -225,7 +219,7 @@ export default class Helper {
    * @param {Integer} tvdb_id - The tvdb id of the show you want the images from.
    * @returns {Object} - Object with a banner, fanart and poster images.
    */
-  async _getImages(tmdb_id, tvdb_id) {
+  async _getImages(tmdb_id, tvdb_id, imdb_id) {
     const holder = "images/posterholder.png"
     const images = {
       banner: holder,
@@ -235,11 +229,17 @@ export default class Helper {
 
     try {
       const tmdbData = await tmdb.call(`/tv/${tmdb_id}/images`, {});
+      if (!tmdbData.posters || tmdbData.posters.length <= 0) {
+        throw new Error(`Invalid tmdb posters for /movie/${tmdb_id}`);
+      }
+      if (!tmdbData.backdrops || tmdbData.backdrops.length <= 0) {
+        tmdbData.backdrops = tmdbData.posters;
+      }
 
-      let tmdbPoster = tmdbData['posters'].filter(poster => poster.iso_639_1 === "en" || poster.iso_639_1 === null)[0]
+      let tmdbPoster = tmdbData['posters'][0];
       tmdbPoster = tmdb.getImageUrl(tmdbPoster.file_path, 'w500');
 
-      let tmdbBackdrop = tmdbData['backdrops'].filter(backdrop => backdrop.iso_639_1 === "en" || backdrop.iso_639_1 === null)[0];
+      let tmdbBackdrop = tmdbData['backdrops'][0];
       tmdbBackdrop = tmdb.getImageUrl(tmdbBackdrop.file_path, 'w500');
 
       images.banner = tmdbPoster ? tmdbPoster : holder;
@@ -248,17 +248,36 @@ export default class Helper {
     } catch (err) {
       try {
         const tvdbImages = await tvdb.getSeriesById(tvdb_id);
-        images.banner = tvdbImages.banner ? `http://thetvdb.com/banners/${tvdbImages.banner}` : holder;
-        images.fanart = tvdbImages.fanart? `http://thetvdb.com/banners/${tvdbImages.fanart}` : holder;
-        images.poster = tvdbImages.poster ? `http://thetvdb.com/banners/${tvdbImages.poster}` : holder;
+        if (!tvdbImages.poster) {
+          throw new Error(`Invalid tvdb posters for /tv/${tmdb_id}`);
+        }
+
+        images.poster = `http://thetvdb.com/banners/${tvdbImages.poster}`;
+        images.banner = tvdbImages.banner ? `http://thetvdb.com/banners/${tvdbImages.banner}` : images.poster;
+        images.fanart = tvdbImages.fanart? `http://thetvdb.com/banners/${tvdbImages.fanart}` : images.poster;
       } catch (err) {
         try {
           const fanartImages = await fanart.getShowImages(tvdb_id);
+          if (!fanartImages.tvposter || fanartImages.tvposter.length <= 0) {
+            throw new Error(`Invalid fanart posters for /tv/${tmdb_id}`);
+          }
+
+          images.poster = fanartImages.tvposter ? fanartImages.tvposter[0].url : holder;
           images.banner = fanartImages.tvbanner ? fanartImages.tvbanner[0].url : holder;
           images.fanart = fanartImages.showbackground ? fanartImages.showbackground[0].url : fanartImages.clearart ? fanartImages.clearart[0].url : holder;
-          images.poster = fanartImages.tvposter ? fanartImages.tvposter[0].url : holder;
         } catch(err) {
-          return this._util.onError(`Images: Could not find images on: ${err.path || err} with id: '${tmdb_id | tvdb_id}'`);
+          try {
+            let images = await mdata.images.show({imdb: imdb_id, tmdb: tmdb_id, tvdb: tvdb_id})
+            if (!images.poster && !images.fanart) {
+              throw new Error(`Invalid tmdb posters for /tv/${tmdb_id}`);
+            }
+
+            images.banner = images.fanart || images.poster;
+            images.fanart = images.fanart || images.poster;
+            images.poster = images.poster || images.fanart;
+          } catch (e) {
+            throw new Error(`Images: Could not find images on: ${e.path || e} with id: '${tmdb_id | tvdb_id}'`);
+          }
         }
       }
     }
@@ -271,14 +290,14 @@ export default class Helper {
    * @param {String} slug - The slug to query https://trakt.tv/.
    * @returns {Show} - A new show without the episodes attached.
    */
-  async getTraktInfo(slug) {
+  async getTraktInfo(id) {
     try {
       const traktShow = await trakt.shows.summary({
-        id: slug,
+        id: id,
         extended: "full"
       });
       const traktWatchers = await trakt.shows.watching({
-        id: slug
+        id: id
       });
 
       let watching = 0;
@@ -315,7 +334,7 @@ export default class Helper {
         };
       }
     } catch (err) {
-      return this._util.onError(`Trakt: Could not find any data on: ${err.path || err} with slug: '${slug}'`);
+      return this._util.onError(`Trakt: Could not find any data on: ${err.path || err} with id: '${id}'`);
     }
   }
 
@@ -326,15 +345,14 @@ export default class Helper {
    * @param {String} slug - The slug of the show.
    * @returns {Show} - A show with updated torrents.
    */
-  async addEpisodes(show, episodes, slug) {
+  async addEpisodes(show, episodes, imdb) {
     try {
-      const dateBased = episodes.dateBased;
-      delete episodes.dateBased;
-
+      const dateBased = show.dateBased;
+      delete show.dateBased;
       if (dateBased) {
-        await asyncq.each(Object.keys(episodes), seasonNumber => this._addDateBasedSeason(show, episodes, seasonNumber, slug));
+        await asyncq.each(Object.keys(episodes), seasonNumber => this._addDateBasedSeason(show, episodes, seasonNumber, imdb));
       } else {
-        await asyncq.each(Object.keys(episodes), seasonNumber => this._addSeasonalSeason(show, episodes, seasonNumber, slug));
+        await asyncq.each(Object.keys(episodes), seasonNumber => this._addSeasonalSeason(show, episodes, seasonNumber, imdb));
       }
 
       return await this._updateEpisodes(show);
