@@ -167,7 +167,7 @@ export default class Trakt {
     let page = 0;
     return asyncq.until(() => {
       page++;
-      return page >= 2;
+      return done;
     }, async () => {
       try {
         const movies = await trakt.movies.updates({
@@ -225,7 +225,7 @@ export default class Trakt {
     let page = 0;
     return asyncq.until(() => {
       page++;
-      return page >= 2;
+      return done;
     }, async () => {
       try {
         const shows = await trakt.shows.updates({
