@@ -311,7 +311,7 @@ export default class Trakt {
   async search() {
     try {
       logger.info(`${this.name}: Starting scraping...`);
-      // await this._getMovies();
+      await this._getMovies();
       return await this._getShows();
     } catch (err) {
       return this._util.onError(err);
