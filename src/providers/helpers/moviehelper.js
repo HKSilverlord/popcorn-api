@@ -3,7 +3,7 @@ import asyncq from "async-q";
 
 import Movie from "../../models/Movie";
 import Util from "../../util";
-import { fanart, omdb, tmdb, trakt } from "../../config/constants";
+import { fanart, omdb, tmdb, trakt, mdata } from "../../config/constants";
 
 /** Class for saving movies. */
 export default class Helper {
@@ -164,7 +164,7 @@ export default class Helper {
             images.fanart = images.fanart || images.poster;
             images.poster = images.poster || images.fanart;
           } catch (e) {
-            throw new Error(`Images: Could not find images on: ${e.path || e} with id: '${tmdb_id | tvdb_id}'`);
+            throw new Error(`Images: Could not find images on: ${e.path || e} with id: '${tmdb_id}'`);
           }
         }
       }
