@@ -176,13 +176,18 @@ export default class Trakt {
           page: page
         });
 
-        logger.info(`${this.name}: Found ${movies.length} movies`);
+        logger.info(`${this.name}: Found ${movies.length} movies from page ${page}`);
         if (!movies || movies.length <= 0) {
           done = true;
         }
 
         await asyncq.mapSeries(movies, async movie => {
           if (movie.movie.year <= 1995 || (movie.movie.ids.tmdb == null && movie.movie.imdb == null)) {
+            return
+          }
+
+          const found = await Movie.findOne({ slug: movie.movie.ids.slug }).exec();
+          if (found) {
             return
           }
 
@@ -234,13 +239,18 @@ export default class Trakt {
           page: page
         });
 
-        logger.info(`${this.name}: Found ${shows.length} shows`);
+        logger.info(`${this.name}: Found ${shows.length} shows from page ${page}`);
         if (!shows || shows.length <= 0) {
           done = true;
         }
 
         await asyncq.mapSeries(shows, async show => {
           if (show.show.year <= 1995 || (show.show.ids.tvdb == null && show.show.ids.tmdb == null)) {
+            return
+          }
+
+          let found = await Show.findOne({ slug: show.show.ids.slug }).exec();
+          if (found && found.status == 'ended') {
             return
           }
 
