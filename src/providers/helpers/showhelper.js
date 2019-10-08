@@ -1,6 +1,6 @@
 // Import the neccesary modules.
 import asyncq from "async-q";
-
+import request from "request";
 import Show from "../../models/Show";
 import Util from "../../util";
 import { fanart, trakt, tmdb, tvdb, mdata } from "../../config/constants";
@@ -213,6 +213,26 @@ export default class Helper {
     }
   }
 
+  _getImdbImage (imdb_id) {
+    return new Promise((resolve, reject) => {
+      let url = `https://v2.sg.media-imdb.com/suggestion/t/${imdb_id}.json`
+      request.get({url:url, json:true}, function (e, r, body) {
+        if (e) {
+          return reject(e);
+        }
+
+        if (body && body.d && body.d.length >= 1) {
+          let imageUrl = body.d[0].i && body.d[0].i.imageUrl ? body.d[0].i.imageUrl : null;
+          if (imageUrl) {
+            return resolve(imageUrl);
+          }
+        }
+
+        return reject(new Error(`Not found imdb image for ${imdb_id}`));
+      })
+    })
+  }
+
   /**
    * Get images from Fanart.tv on thetvdb.com.
    * @param {Integer} tmdb_id - The tmdb id of the how you want the images from.
@@ -228,9 +248,21 @@ export default class Helper {
     };
 
     try {
+      if (imdb_id) {
+        let image = await this._getImdbImage(imdb_id);
+        images.banner = image;
+        images.fanart = image;
+        images.poster = image;
+        return images;
+      }
+    } catch (e) {
+      logger.warn(`Get image from imdb search suggestion failed: ${e.message}`);
+    }
+
+    try {
       const tmdbData = await tmdb.call(`/tv/${tmdb_id}/images`, {});
       if (!tmdbData.posters || tmdbData.posters.length <= 0) {
-        throw new Error(`Invalid tmdb posters for /movie/${tmdb_id}`);
+        throw new Error(`Invalid tmdb posters for /tv/${tmdb_id}`);
       }
       if (!tmdbData.backdrops || tmdbData.backdrops.length <= 0) {
         tmdbData.backdrops = tmdbData.posters;
@@ -242,9 +274,13 @@ export default class Helper {
       let tmdbBackdrop = tmdbData['backdrops'][0];
       tmdbBackdrop = tmdb.getImageUrl(tmdbBackdrop.file_path, 'w500');
 
-      images.banner = tmdbPoster ? tmdbPoster : holder;
-      images.fanart = tmdbBackdrop ? tmdbBackdrop : holder;
-      images.poster = tmdbPoster ? tmdbPoster : holder;
+      if (!tmdbPoster && !tmdbBackdrop) {
+        throw new Error(`Invalid tmdb posters and backdrop for /tv/${tmdb_id}`);
+      }
+
+      images.banner = tmdbPoster ? tmdbPoster : tmdbBackdrop;
+      images.fanart = tmdbBackdrop ? tmdbBackdrop : tmdbPoster;
+      images.poster = tmdbPoster ? tmdbPoster : tmdbBackdrop;
     } catch (err) {
       try {
         const tvdbImages = await tvdb.getSeriesById(tvdb_id);
@@ -258,26 +294,15 @@ export default class Helper {
       } catch (err) {
         try {
           const fanartImages = await fanart.getShowImages(tvdb_id);
-          if (!fanartImages.tvposter || fanartImages.tvposter.length <= 0) {
+          if (!fanartImages.tvposter || fanartImages.tvposter.length <= 0 || !fanartImages.tvposter[0].url) {
             throw new Error(`Invalid fanart posters for /tv/${tmdb_id}`);
           }
 
-          images.poster = fanartImages.tvposter ? fanartImages.tvposter[0].url : holder;
-          images.banner = fanartImages.tvbanner ? fanartImages.tvbanner[0].url : holder;
-          images.fanart = fanartImages.showbackground ? fanartImages.showbackground[0].url : fanartImages.clearart ? fanartImages.clearart[0].url : holder;
+          images.poster = fanartImages.tvposter[0].url;
+          images.banner = fanartImages.tvbanner ? fanartImages.tvbanner[0].url : fanartImages.tvposter[0].url;
+          images.fanart = fanartImages.showbackground ? fanartImages.showbackground[0].url : fanartImages.clearart ? fanartImages.clearart[0].url : fanartImages.tvposter[0].url;
         } catch(err) {
-          try {
-            let images = await mdata.images.show({imdb: imdb_id, tmdb: tmdb_id, tvdb: tvdb_id})
-            if (!images.poster && !images.fanart) {
-              throw new Error(`Invalid tmdb posters for /tv/${tmdb_id}`);
-            }
-
-            images.banner = images.fanart || images.poster;
-            images.fanart = images.fanart || images.poster;
-            images.poster = images.poster || images.fanart;
-          } catch (e) {
-            throw new Error(`Images: Could not find images on: ${e.path || e} with id: '${tmdb_id | tvdb_id}'`);
-          }
+          throw new Error(`Images: Could not find images on: ${err.path || err} with id: '${tmdb_id | tvdb_id}'`);
         }
       }
     }

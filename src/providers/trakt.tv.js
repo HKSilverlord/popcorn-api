@@ -8,7 +8,7 @@ import { maxWebRequest, webRequestTimeout } from "../config/constants";
 import MovieHelper from "./helpers/moviehelper";
 import ShowHelper from "./helpers/showhelper";
 import Util from "../util";
-import { trakt } from "../config/constants";
+import { trakt, tmdb, tvdb } from "../config/constants";
 
 /** Class for scraping movies from https://yts.ag/. */
 export default class Trakt {
@@ -49,7 +49,7 @@ export default class Trakt {
     return new Promise((resolve, reject) => {
       setTimeout(() => {
         return resolve();
-      }, 500)
+      }, 700)
     })
   }
 
@@ -165,22 +165,29 @@ export default class Trakt {
   async _getMovies() {
     let done = false;
     let page = 0;
+    let start_date = '2014-09-17';
+    let start = await Movie.findOne({}).sort({last_updated: -1}).exec();
+    if (start && start.last_updated) {
+      start_date = new Date(start.last_updated).toISOString().split('T')[0];
+    }
+
     return asyncq.until(() => {
       page++;
       return done;
     }, async () => {
       try {
+        logger.info(`${this.name}: Get movies from start date ${start_date}`);
         const movies = await trakt.movies.updates({
-          start_date: '2014-09-17',
+          start_date: start_date,
           limit: 100,
           page: page
         });
 
-        logger.info(`${this.name}: Found ${movies.length} movies from page ${page}`);
         if (!movies || movies.length <= 0) {
           done = true;
         }
 
+        logger.info(`${this.name}: Found ${movies.length} movies from page ${page}, date: ${movies[0].updated_at}`);
         await asyncq.mapSeries(movies, async movie => {
           if (movie.movie.year <= 1995 || (movie.movie.ids.tmdb == null && movie.movie.imdb == null)) {
             return
@@ -192,6 +199,14 @@ export default class Trakt {
           }
 
           try {
+            if (!movie.movie.ids.imdb) {
+              let tmdbData = await tmdb.call(`/movie/${movie.movie.ids.tmdb}`, {});
+              if (tmdbData && tmdbData.imdb_id) {
+                movie.movie.ids.imdb = tmdbData.imdb_id;
+                console.log(movie.movie.ids)
+              }
+            }
+
             let images = await this._mHelper._getImages(movie.movie.ids["tmdb"], movie.movie.ids["imdb"]);
             let detail = await trakt.movies.summary({
               id: movie.movie.ids.trakt,
@@ -202,6 +217,10 @@ export default class Trakt {
             let traktWatchers = await trakt.movies.watching({
               id: movie.movie.ids.trakt
             });
+
+            if (!detail.ids.imdb && movie.movie.ids.imdb) {
+              detail.ids.imdb = movie.movie.ids.imdb;
+            }
 
             detail.watching = 0;
             if (traktWatchers !== null) detail.watching = traktWatchers.length;
@@ -228,22 +247,29 @@ export default class Trakt {
   async _getShows() {
     let done = false;
     let page = 0;
+    let start_date = '2014-09-24';
+    let start = await Show.findOne({}).sort({last_updated: -1}).exec();
+    if (start && start.last_updated) {
+      start_date = new Date(start.last_updated).toISOString().split('T')[0];
+    }
+
     return asyncq.until(() => {
       page++;
       return done;
     }, async () => {
       try {
+        logger.info(`${this.name}: Get movies from start date ${start_date}`);
         const shows = await trakt.shows.updates({
-          start_date: '2014-09-24',
+          start_date: start_date,
           limit: 100,
           page: page
         });
 
-        logger.info(`${this.name}: Found ${shows.length} shows from page ${page}`);
         if (!shows || shows.length <= 0) {
           done = true;
         }
 
+        logger.info(`${this.name}: Found ${shows.length} shows from page ${page}, date: ${shows[0].updated_at}`);
         await asyncq.mapSeries(shows, async show => {
           if (show.show.year <= 1995 || (show.show.ids.tvdb == null && show.show.ids.tmdb == null)) {
             return
@@ -255,12 +281,23 @@ export default class Trakt {
           }
 
           logger.info(`${this.name}: Quering show ${show.show.ids.trakt} detail`);
+          if (!show.show.ids.imdb) {
+            const tvdbData = await tvdb.getSeriesById(show.show.ids.tvdb);
+            if (tvdbData && tvdbData.IMDB_ID) {
+              show.show.ids.imdb = tvdbData.IMDB_ID;
+            }
+          }
+
           try {
             let images = await this._sHelper._getImages(show.show.ids["tmdb"], show.show.ids["tvdb"], show.show.ids["imdb"]);
             let detail = await trakt.shows.summary({
               id: show.show.ids.trakt,
               extended: 'full'
             })
+
+            if (!detail.ids.imdb && show.show.ids.imdb) {
+              detail.ids.imdb = show.show.ids.imdb;
+            }
 
             detail.images = images;
             let episodes = [], finished = false;

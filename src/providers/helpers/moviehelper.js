@@ -1,6 +1,6 @@
 // Import the neccesary modules.
 import asyncq from "async-q";
-
+import request from "request";
 import Movie from "../../models/Movie";
 import Util from "../../util";
 import { fanart, omdb, tmdb, trakt, mdata } from "../../config/constants";
@@ -105,6 +105,26 @@ export default class Helper {
       .then(() => this._updateMovie(movie));
   }
 
+  _getImdbImage (imdb_id) {
+    return new Promise((resolve, reject) => {
+      let url = `https://v2.sg.media-imdb.com/suggestion/t/${imdb_id}.json`
+      request.get({url:url, json:true}, function (e, r, body) {
+        if (e) {
+          return reject(e);
+        }
+
+        if (body && body.d && body.d.length >= 1) {
+          let imageUrl = body.d[0].i && body.d[0].i.imageUrl ? body.d[0].i.imageUrl : null;
+          if (imageUrl) {
+            return resolve(imageUrl);
+          }
+
+          return reject(new Error(`Not found imdb image for ${imdb_id}`));
+        }
+      })
+    })
+  }
+
   /**
    * Get images from themoviedb.org or omdbapi.com.
    * @param {Integer} tmdb_id - The tmdb id of the movie you want the images from.
@@ -118,6 +138,18 @@ export default class Helper {
       fanart: holder,
       poster: holder
     };
+
+    try {
+      if (imdb_id) {
+        let image = await this._getImdbImage(imdb_id);
+        images.banner = image;
+        images.fanart = image;
+        images.poster = image;
+        return images;
+      }
+    } catch (e) {
+      logger.warn(`Get image from imdb search suggestion failed: ${e.message}`);
+    }
 
     try {
       const tmdbData = await tmdb.call(`/movie/${tmdb_id}/images`, {});
@@ -135,37 +167,39 @@ export default class Helper {
       let tmdbBackdrop = tmdbData['backdrops'][0];
       tmdbBackdrop = tmdb.getImageUrl(tmdbBackdrop.file_path, 'w500');
 
-      images.banner = tmdbPoster ? tmdbPoster : holder;
-      images.fanart = tmdbBackdrop ? tmdbBackdrop : holder;
-      images.poster = tmdbPoster ? tmdbPoster : holder;
+      if (!tmdbPoster && !tmdbBackdrop) {
+        throw new Error(`Invalid tmdb posters and backdrop for /movie/${tmdb_id}`);
+      }
+
+      images.banner = tmdbPoster ? tmdbPoster : tmdbPoster;
+      images.fanart = tmdbBackdrop ? tmdbBackdrop : tmdbPoster;
+      images.poster = tmdbPoster ? tmdbPoster : tmdbBackdrop;
     } catch (err) {
       try {
         const omdbImages = await omdb.byID({
           imdb: imdb_id,
           type: "movie"
         });
-        images.banner = omdbImages.Poster ? omdbImages.Poster : holder;
-        images.fanart = omdbImages.Poster? omdbImages.Poster : holder;
-        images.poster = omdbImages.Poster ? omdbImages.Poster : holder;
+
+        if (!omdbImages.Poster) {
+          throw new Error(`Invalid omdb posters for /movie/${tmdb_id}`);
+        }
+
+        images.banner = omdbImages.Poster;
+        images.fanart = omdbImages.Poster;
+        images.poster = omdbImages.Poster;
       } catch (err) {
         try {
           const fanartImages = await fanart.getMovieImages(tmdb_id);
-          images.banner = fanartImages.moviebanner ? fanartImages.moviebanner[0].url : holder;
-          images.fanart = fanartImages.moviebackground ? fanartImages.moviebackground[0].url : fanartImages.hdmovieclearart ? fanartImages.hdmovieclearart[0].url : holder;
-          images.poster = fanartImages.movieposter ? fanartImages.movieposter[0].url : holder;
-        } catch (err) {
-          try {
-            let images = await mdata.images.movie({imdb: imdb_id, tmdb: tmdb_id})
-            if (!images.poster && !images.fanart) {
-              throw new Error(`Invalid tmdb posters for /tv/${tmdb_id}`);
-            }
-
-            images.banner = images.fanart || images.poster;
-            images.fanart = images.fanart || images.poster;
-            images.poster = images.poster || images.fanart;
-          } catch (e) {
-            throw new Error(`Images: Could not find images on: ${e.path || e} with id: '${tmdb_id}'`);
+          if (!fanartImages.movieposter || fanartImages.movieposter.length <= 0 || !fanartImages.movieposter[0].url) {
+            throw new Error(`Invalid fanart posters for /movie/${tmdb_id}`);
           }
+
+          images.poster = fanartImages.movieposter[0].url;
+          images.banner = fanartImages.moviebanner ? fanartImages.moviebanner[0].url : fanartImages.movieposter[0].url;
+          images.fanart = fanartImages.moviebackground ? fanartImages.moviebackground[0].url : fanartImages.hdmovieclearart ? fanartImages.hdmovieclearart[0].url : fanartImages.movieposter[0].url;
+        } catch (e) {
+          throw new Error(`Images: Could not find images on: ${e.path || e} with id: '${tmdb_id}'`);
         }
       }
     }
