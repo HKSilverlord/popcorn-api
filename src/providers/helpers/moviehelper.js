@@ -118,9 +118,9 @@ export default class Helper {
           if (imageUrl) {
             return resolve(imageUrl);
           }
-
-          return reject(new Error(`Not found imdb image for ${imdb_id}`));
         }
+
+        return reject(new Error(`Not found imdb image for ${imdb_id}`));
       })
     })
   }
