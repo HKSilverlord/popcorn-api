@@ -1,4 +1,5 @@
 // Import the neccesary modules.
+import "dotenv/config";
 import Fanart from "fanart.tv-api";
 import OMDB from "omdb-api-pt";
 import path from "path";
@@ -226,13 +227,33 @@ export const cronTime = "0 0 */6 * * *";
  * The host of the server of the database. Default is `["localhost"]`.
  * @type {Array}
  */
-export const dbHosts = ["localhost"];
+export const dbHost = process.env.MONGO_URI || "localhost";
+
+/**
+ * The host of the server of the database. Default is `["localhost"]`.
+ * @type {Array}
+ */
+export const dbPort = process.env.MONGO_PORT || 27017;
 
 /**
  * The name of the database. Default is `popcorn`.
  * @type {String}
  */
-export const dbName = "popcorn";
+export const dbName = process.env.MONGO_DATABASE || "popcorn";
+
+
+/**
+ * The name of the database. Default is `popcorn`.
+ * @type {String}
+ */
+export const dbPass = process.env.MONGO_PASS;
+
+
+/**
+ * The name of the database. Default is `popcorn`.
+ * @type {String}
+ */
+export const dbUser = process.env.MONGO_USER;
 
 /**
  * The providers for scraping ExtraTorrent for anime.

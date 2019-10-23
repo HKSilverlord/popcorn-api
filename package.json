@@ -11,6 +11,7 @@
     "commander": "^2.9.0",
     "compression": "^1.6.2",
     "cron": "^1.1.1",
+    "dotenv": "^8.2.0",
     "express": "^4.14.0",
     "express-winston": "^2.0.0",
     "extratorrent-api": "^1.0.8",

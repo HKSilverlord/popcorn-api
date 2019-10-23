@@ -6,7 +6,7 @@ import mongoose from "mongoose";
 import responseTime from "response-time";
 
 import Logger from "./logger";
-import { dbHosts, dbName, Promise } from "./constants";
+import { dbHost, dbPort, dbName, dbPass, dbUser, Promise } from "./constants";
 
 /** Class for setting up the API. */
 export default class Setup {
@@ -50,7 +50,7 @@ export default class Setup {
   /** Connection and configuration of the MongoDB database. */
   static connectMongoDB() {
     mongoose.Promise = Promise;
-    mongoose.connect(`mongodb://${dbHosts.join(",")}/${dbName}`, {
+    mongoose.connect(`mongodb://${dbUser}:${dbPass}@${dbHost}:${dbPort}/${dbName}`, {
       db: {
         native_parser: true
       },
