@@ -221,21 +221,20 @@ export default class Scraper {
   /** Initiate the scraping. */
   scrape() {
     Scraper._util.setLastUpdated();
+    let scrapes = [];
+    let scrapeMovies = process.env.SCRAPE_MOVIE == "true" ? true : false;
+    let scrapeShows = process.env.SCRAPE_SHOW == "true" ? true : false;
+    if (scrapeShows) {
+      scrapes.push(this._scrapeEZTVShows);
+      scrapes.push(this._scrapeExtraTorrentShows);
+    }
 
-    asyncq.eachSeries([
-      this._scrapeEZTVShows,
-      this._scrapeExtraTorrentShows,
-      // this._scrapeKATShows,
+    if (scrapeMovies) {
+      scrapes.push(this._scrapeExtraTorrentMovies);
+      scrapes.push(this._scrapeYTSMovies);
+    }
 
-      this._scrapeExtraTorrentMovies,
-      // this._scrapeKATMovies,
-      this._scrapeYTSMovies,
-
-      this._scrapeExtraTorrentAnime,
-      this._scrapeHorribleSubsAnime,
-      // this._scrapeKATAnime,
-      this._scrapeNyaaAnime
-    ], scraper => scraper())
+    asyncq.eachSeries(scrapes, scraper => scraper())
       .then(() => Scraper._util.setStatus())
       .then(() => asyncq.eachSeries(collections, collection => Scraper._util.exportCollection(collection)))
       .catch(err => Scraper._util.onError(`Error while scraping: ${err}`));
