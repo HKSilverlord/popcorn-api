@@ -402,7 +402,7 @@ export const pageSize = 50;
  * The port on which the API will run on. Default is `5000`.
  * @type {Integer}
  */
-export const port = 4000;
+export const port = process.env.PORT || 4000;
 
 /**
  * The promise object to override the mongoose promise object. Default is `global.Promise`.
